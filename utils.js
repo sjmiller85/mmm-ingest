@@ -4,6 +4,7 @@ const config = require('./config');
 // HTTPS request utility method
 const getRequest = (url) => {
     return new Promise((resolve, reject) => {
+        console.log(new Date() + ' - ' + url);
         setTimeout(() => {
             https.get(url, res => {
                 let body = '';

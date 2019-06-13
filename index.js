@@ -1,4 +1,5 @@
 const https = require('https');
+const fs = require('fs');
 const config = require('./config');
 const db = require('./db');
 const utils = require('./utils')
@@ -8,14 +9,14 @@ let collections = {};
 
 db.connect().then(response => {
     collections = response;
-    // TODO: remove this
-    return clearQueue();
-}).then(() => {
-    // TODO: remove this
-    return db.insertOne(collections.queue, { creator: "Chronoas" });
-}).then(() => {
-    // Check icons collection for consistency
+    // Validate icons collection, repair if necessary
     return verifyIconsCollection();
+}).then(() => {
+    // Check if lock file exists, and stop process if exists
+    return checkLockFile();
+}).then(() => {
+    // Create a lock file to prevent concurrent processes
+    return createLockFile();
 }).then(() => {
     // First get a list of all creators that need updating
     return getOutdatedCreators();
@@ -39,11 +40,53 @@ db.connect().then(response => {
     return updateAndAddCreatorsToDatabase(creatorData);
 }).then(creatorLevels => {
     // Insert/update creator levels
-    return updateAndAddLevelsToDatabase(creatorLevels);5
+    return updateAndAddLevelsToDatabase(creatorLevels);
 }).then(() => {
+    // delete all entries from the queue
     return clearQueue();
+}).then(() => {
+    // remove the lock file
+    return removeLockFile();
+}).then(() => {
+    // Exit
+    process.exit();
+}).catch(err => {
+    return err;
 });
 
+const checkLockFile = () => {
+    return new Promise((resolve, reject) => {
+        console.log('Checking for lock file');
+        if (fs.existsSync('./lock')) {
+            reject(new Error('Currently executing queue, try again later...'));
+            return;
+        }
+        resolve();
+    });
+};
+
+const createLockFile = () => {
+    return new Promise((resolve, reject) => {
+        console.log('Creating new lock file');
+        fs.open('./lock', 'w', function(err, file) {
+            if (err) {
+                reject(new Error(err));
+                return;
+            }
+            resolve();
+        });
+    });
+}
+
+const removeLockFile = () => {
+    return new Promise((resolve, reject) => {
+        console.log('Deleting lock file');
+        fs.unlink('./lock', (err) => {
+            if (err) reject(new Error(err));
+            resolve();
+        })
+    })
+}
     
 const verifyIconsCollection = () => {
     // Load the icons collection to check it
@@ -70,8 +113,8 @@ const verifyIconsCollection = () => {
 };
 
 const getOutdatedCreators = () => {
-    console.log('Getting outdated Creators from creators collection');
-    return db.find(collections.creators, { updated: { $lt: new Date( new Date().getTime() - config.threshold ) } });
+    const threshold = new Date(new Date().getTime() - config.threshold);
+    return db.find(collections.creators, { updated: { $lt: threshold } });
 }
 
 const addOutdatedCreatorsToQueue = (creators) => {
@@ -113,6 +156,7 @@ const getCreatorsFromQueue = () => {
 
 const queryForCreatorInfo = (creators) => {
     console.log('Querying the Mega Man Maker API for creators');
+    if (!creators.length) return;
     let requests = [];
 
     for (let creator of creators) {
@@ -185,6 +229,8 @@ const insertNewCreators = (creators) => {
     for (creator of creators) {
         creator.score = [{ date: new Date(), score: creator.score }];
         creator.level_size = [{ date: new Date(), level_size: creator.level_size }];
+        creator.updated = new Date();
+        delete creator.levels;
         inserts.push(db.insertOne(collections.creators, creator));
         console.log('Inserting new creator: ' + creator.name);
     }
@@ -255,7 +301,5 @@ const insertNewLevels = (levels) => {
 };
 
 const clearQueue = () => {
-    setTimeout(() => {
-        db.deleteMany(collections.queue, {});
-    }, 5000)
+    return db.deleteMany(collections.queue, {});
 };
