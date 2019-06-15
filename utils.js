@@ -13,7 +13,7 @@ const getRequest = (url) => {
                     body += chunk;
                 })
                 res.on('end', () => {
-                    resolve(JSON.parse(body));
+                    resolve(checkIfErrorInRequest(JSON.parse(body)), url);
                 });
             }).on('error', (err) => {
                 reject('HTTPS Error: ' + err.message);
@@ -22,8 +22,27 @@ const getRequest = (url) => {
     });
 };
 
+const checkIfErrorInRequest = (body, url) => {
+    // Checks if the get request returned an error, indicating it doesn't exist or was deleted
+    if (body.error) {
+        if (url.includes('level')) {
+            // It was a level
+            body.type = 'level';
+            body.id = url.substr(url.lastIndexOf('/') + 1);
+        }
+        if (url.includes('name')) {
+            // It was a creator
+            body.type = 'creator';
+            body.id = url.substr(url.lastIndexOf('=') + 1);
+        }
+    }
+
+    return body;
+}
+
 const runPromisesInSerial = (promises, method) => {
     return new Promise((resolve, reject) => {
+        console.log('Running promises in serial');
         promises.reduce((promiseChain, currentTask) => {
             return promiseChain.then((acc) => method(currentTask).then((res) => [...acc, res]));
         }, Promise.resolve([])).then(results => {

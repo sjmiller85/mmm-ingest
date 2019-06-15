@@ -9,6 +9,7 @@
   "author": "Scott Miller",
   "license": "ISC",
   "dependencies": {
-    "mongodb": "^3.2.7"
+    "mongodb": "^3.2.7",
+    "ps-node": "^0.1.6"
   }
 }

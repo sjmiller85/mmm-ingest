@@ -5,5 +5,5 @@ module.exports = {
     
     httpsDelay: 500, // Throttle the https requests to avoid DOS'ing the dev's server
 
-    threshold: 600000 // How long before records become stale and need to be updated, 6000 milliseconds = 1 minute
+    threshold: 6000 // How long before records become stale and need to be updated, 6000 milliseconds = 1 minute
 }

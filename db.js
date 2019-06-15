@@ -19,8 +19,12 @@ const connect = () => {
     });
 };
 
-const find = (collection, query) => {
-    return collection.find(query).toArray();
+const find = (collection, query, projection) => {
+    if (projection) {
+        return collection.find(query).project(projection).toArray();
+    } else {
+        return collection.find(query).toArray();
+    }
 };
 
 const deleteMany = (collection, query) => {
@@ -35,9 +39,13 @@ const insertMany = (collection, query) => {
     return collection.insertMany(query);
 };
 
-const updateOne = (collection, selector, updates) => {
-    return collection.updateOne(selector, updates);
+const updateOne = (collection, selector, updates, options = {}) => {
+    return collection.updateOne(selector, updates, options);
 };
+
+const aggregate = (collection, query) => {
+    return collection.aggregate(query).toArray();
+}
 
 module.exports = {
     connect: connect,
@@ -45,5 +53,6 @@ module.exports = {
     deleteMany: deleteMany,
     insertOne: insertOne,
     insertMany: insertMany,
-    updateOne: updateOne
+    updateOne: updateOne,
+    aggregate: aggregate
 };

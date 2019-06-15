@@ -1,4 +1,4 @@
-const https = require('https');
+const ps = require('ps-node');
 const fs = require('fs');
 const config = require('./config');
 const db = require('./db');
@@ -13,10 +13,7 @@ db.connect().then(response => {
     return verifyIconsCollection();
 }).then(() => {
     // Check if lock file exists, and stop process if exists
-    return checkLockFile();
-}).then(() => {
-    // Create a lock file to prevent concurrent processes
-    return createLockFile();
+    return checkIfProcessAlreadyRunning();
 }).then(() => {
     // First get a list of all creators that need updating
     return getOutdatedCreators();
@@ -42,48 +39,37 @@ db.connect().then(response => {
     // Insert/update creator levels
     return updateAndAddLevelsToDatabase(creatorLevels);
 }).then(() => {
-    // delete all entries from the queue
-    return clearQueue();
+    // Get any leftover levels from the queue to update
+    return getRemainingLevelsInQueue();
+}).then((levels) => {
+    // Query the Mega Man Maker API for level info
+    return queryForLevelInfo(levels);
+}).then((levels) => {
+    // Insert/update levels
+    return insertOrUpdateRemainingLevels(levels);
 }).then(() => {
-    // remove the lock file
-    return removeLockFile();
+    // Get the average score of creator's levels
+    return getCreatorScoreAverages();
+}).then((creators) => {
+    // Update creators collection with averages
+    return updateCreatorsAverages(creators);
 }).then(() => {
     // Exit
     process.exit();
 }).catch(err => {
-    return err;
+    console.log(err);
+    process.exit();
 });
 
-const checkLockFile = () => {
+const checkIfProcessAlreadyRunning = () => {
+    console.log('Checking if another instance of ingest is already running');
     return new Promise((resolve, reject) => {
-        console.log('Checking for lock file');
-        if (fs.existsSync('./lock')) {
-            reject(new Error('Currently executing queue, try again later...'));
-            return;
-        }
-        resolve();
-    });
-};
-
-const createLockFile = () => {
-    return new Promise((resolve, reject) => {
-        console.log('Creating new lock file');
-        fs.open('./lock', 'w', function(err, file) {
-            if (err) {
-                reject(new Error(err));
-                return;
+        ps.lookup({ command: 'node', arguments: 'ingest.js' }, (err, res) => {
+            if (!res || res.length === 1) {
+                resolve();
+            } else {
+                reject(new Error('Process already running'));
             }
-            resolve();
-        });
-    });
-}
-
-const removeLockFile = () => {
-    return new Promise((resolve, reject) => {
-        console.log('Deleting lock file');
-        fs.unlink('./lock', (err) => {
-            if (err) reject(new Error(err));
-            resolve();
         })
     })
 }
@@ -114,7 +100,7 @@ const verifyIconsCollection = () => {
 
 const getOutdatedCreators = () => {
     const threshold = new Date(new Date().getTime() - config.threshold);
-    return db.find(collections.creators, { updated: { $lt: threshold } });
+    return db.find(collections.creators, { updated: { $lt: threshold }, deleted: { $exists: false } });
 }
 
 const addOutdatedCreatorsToQueue = (creators) => {
@@ -157,17 +143,15 @@ const getCreatorsFromQueue = () => {
 const queryForCreatorInfo = (creators) => {
     console.log('Querying the Mega Man Maker API for creators');
     if (!creators.length) return;
-    let requests = [];
-
-    for (let creator of creators) {
+    let requests = creators.map(val => {
         // Users may be able to submit either an ID or a name which requires one of two API calls
-        if (typeof creator.creator === 'string') {
-            requests.push('https://megamanmaker.com/megamaker/user/name?name=' + creator.creator);
+        if (typeof val.creator === 'string') {
+            return 'https://megamanmaker.com/megamaker/user/name?name=' + val.creator;
         }
-        if (typeof creator.creator === 'number') {
-            requests.push('https://megamanmaker.com/megamaker/user/' + creator.creator);
+        if (typeof val.creator === 'number') {
+            return 'https://megamanmaker.com/megamaker/user/' + val.creator;
         }
-    }
+    });
 
     return utils.runPromisesInSerial(requests, utils.getRequest)
 
@@ -175,6 +159,13 @@ const queryForCreatorInfo = (creators) => {
 
 const updateAndAddCreatorsToDatabase = (creators) => {
     return new Promise((resolve, reject) => {
+        if (!creators || !creators.length) {
+            // No new creators to update, skip the rest
+            console.log('No creators in the queue');
+            resolve([]);
+            return;
+        }
+
         let levels = [];
         let creatorNames = [];
         let newCreators = [];
@@ -183,6 +174,7 @@ const updateAndAddCreatorsToDatabase = (creators) => {
             levels = [ ...levels, ...creator.levels ]; // preserve the levels to add/update later on
             creatorNames.push({ name: creator.name });
         } 
+
         db.find(collections.creators, { $or: creatorNames }).then(res => {
             newCreators = creators.filter(val => {
                 let match = true;
@@ -219,7 +211,7 @@ const updateExistingCreators = (dbResults, creators) => {
             { $set: { score: creator.score, level_size : creator.level_size, icon: creator.icon, admin: creator.admin, updated: new Date() }}))
     }
 
-    return Promise.all(updates);
+    return Promise.all(updates).then(() => removeCreatorsFromQueue(creators));
 };
 
 const insertNewCreators = (creators) => {
@@ -235,11 +227,18 @@ const insertNewCreators = (creators) => {
         console.log('Inserting new creator: ' + creator.name);
     }
 
-    return Promise.all(inserts);
+    return Promise.all(inserts).then(() => removeCreatorsFromQueue(creators));
 };
 
 const updateAndAddLevelsToDatabase = (levels) => {
     return new Promise((resolve, reject) => {
+        if (!levels || !levels.length) {
+            // No levels to update
+            console.log('No new levels from creators to update');
+            resolve();
+            return;
+        }
+
         let levelIDs = [];
         let newLevels = [];
 
@@ -278,15 +277,15 @@ const updateExistingLevels = (dbResults, levels) => {
                 level.downloads.push({ date: new Date(), downloads: record.downloads });
             }
         }
-        console.log('Updating level: ' + level.id);
+        console.log('Updating level: ' + level.id + ' (' + level.name + ')');
         updates.push(db.updateOne(collections.levels, { id: level.id }, 
-            { $set: { score: level.score, downloads : level.downloads, updated: new Date() }}))
+            { $set: { score: level.score, downloads : level.downloads, updated: new Date() }}));
     }
 
-    return Promise.all(updates);
+    return Promise.all(updates).then(() => removeLevelsFromQueue(levels));
 };
 
-const insertNewLevels = (levels) => {
+const insertNewLevels = (levels) => { // TODO: roll this into the update method using upsert
     console.log("Inserting levels");
     var inserts = [];
 
@@ -297,9 +296,109 @@ const insertNewLevels = (levels) => {
         console.log('Inserting new level: ' + level.id + ' (' + level.name + ')');
     }
 
-    return Promise.all(inserts);
+    return Promise.all(inserts).then(() => removeLevelsFromQueue(levels));
 };
 
-const clearQueue = () => {
-    return db.deleteMany(collections.queue, {});
+const removeLevelsFromQueue = (levels) => {
+    if (!levels || !levels.length ) {
+        return;
+    }
+
+    const ids = levels.map(val => { 
+        return { level: val.id } 
+    });
+    return db.deleteMany(collections.queue, { $or: ids });
+};
+
+const removeCreatorsFromQueue = (creators) => {
+    if (!creators || !creators.length) {
+        return;
+    }
+
+    const ids = creators.map(val => { 
+        return { creator: val.id } 
+    });
+    const names = creators.map(val => { 
+        return { creator: val.name } 
+    });
+    
+    return db.deleteMany(collections.queue, { $or: ids }).then(() => {
+        return db.deleteMany(collections.queue, { $or: names });
+    });
+};
+
+const getRemainingLevelsInQueue = () => {
+    return db.find(collections.queue, { level: { $exists: true } });
+};
+
+const queryForLevelInfo = (levels) => {
+    console.log('Getting level info of remaining levels');
+    if (!levels || !levels.length) return;
+
+    let requests = levels.map(val => 'https://megamanmaker.com/megamaker/level/info/' + val.level);
+    console.log(requests);
+    return utils.runPromisesInSerial(requests, utils.getRequest);
+};
+
+const insertOrUpdateRemainingLevels = (levels) => {
+    console.log('Inserting or updating remaining levels');
+    if (!levels || !levels.length) return;
+
+    let updates = levels.map(level => {
+        if(level.error) {
+            if (level.error && level.error === 'Level not found') {
+                console.log('Level is deleted: ' + level.id);
+                return db.updateOne(collections.levels, { id: level.id }, { $set: { deleted: true, update: new Date() } });
+            } else {
+                console.log('Updating Level: ' + level.id);
+                let score = { date: new Date(), score: level.score };
+                let downloads = { date: new Date(), downloads: level.downloads };
+                return db.updateOne(collections.levels, { id: level.id }, 
+                    { $set: { 
+                        id: level.id,
+                        user: level.user,
+                        name: level.name,
+                        username: level.username,
+                        date: new Date(level.date),
+                        boss: level.boss,
+                        updated: new Date() 
+                    }, $addToSet: { 
+                        score: score, 
+                        downloads : downloads 
+                    }}, { upsert: true }); // Upsert in case entry doesn't already exist
+            }
+        }
+    });
+
+    return Promise.all(updates).then(() => removeLevelsFromQueue(levels));
+};
+
+const getCreatorScoreAverages = () => {
+    console.log('Getting average scores of levels');
+    return db.aggregate(collections.levels, [ { $match: {} }, { 
+        $group: { 
+            _id: "$username", 
+            score: { 
+                $avg: { 
+                    $arrayElemAt: [ '$score.score', -1 ] 
+                } 
+            } 
+        }}]
+    );
+};
+
+const updateCreatorsAverages = (creators) => {
+    console.log('Updating average scores');
+    let updates = creators.map(creator => {
+        return db.updateOne(collections.creators, { name: creator._id }, { 
+            $addToSet: {
+                avgScore: {
+                    date: new Date(),
+                    score: creator.score 
+                }
+            }
+        });
+    });
+
+    return Promise.all(updates);
 };
