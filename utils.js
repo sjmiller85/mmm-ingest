@@ -13,7 +13,7 @@ const getRequest = (url) => {
                     body += chunk;
                 })
                 res.on('end', () => {
-                    resolve(checkIfErrorInRequest(JSON.parse(body)), url);
+                    resolve(checkIfErrorInRequest(JSON.parse(body), url));
                 });
             }).on('error', (err) => {
                 reject('HTTPS Error: ' + err.message);
