@@ -2,29 +2,63 @@ const MongoClient = require('mongodb').MongoClient;
 const config = require('./config');
 
 const connect = () => {
-    console.log('Connecting to MongoDB');
-    return MongoClient.connect(config.dbUrl, {useNewUrlParser: true}).then((client) => {
-        console.log('Connected to MongoDB');
-        const db = client.db(config.dbName);
+    return new Promise((resolve, reject) => {
+        console.log('Connecting to MongoDB');
+        MongoClient.connect(config.dbUrl, {useNewUrlParser: true}).then((client) => {
+            console.log('Connected to MongoDB');
+            const db = client.db(config.dbName);
+            let existingCollections = [];
 
-        // global collections object
-        return {
-            creators: db.collection('creators'),
-            icons:    db.collection('icons'),
-            levels:   db.collection('levels'),
-            queue:    db.collection('queue')
-        };
-    }).catch(err => {
-        new Error(err);
+            // We need to verify the collections exist and if not, create them so we can index them
+            db.listCollections({}, { nameOnly: true }).toArray().then(res => {
+                existingCollections = res.map(obj => obj.name);
+
+                if (existingCollections.indexOf('creators') < 0) {
+                    console.log('creating "creators" collection');
+                    return Promise.all([
+                        db.collection('creators').createIndex({ id: 1 }, { unique: true }),
+                        db.collection('creators').createIndex({ name: 1 }, { unique: true }),
+                    ]);
+                }
+                return;
+            }).then(() => {
+                if (existingCollections.indexOf('levels') < 0) {
+                    console.log('creating "levels" collection');
+                    return Promise.all([
+                        db.collection('levels').createIndex({ id: 1 }, { unique: true }),
+                        db.collection('levels').createIndex({ name: 1 }),
+                    ]);
+                }
+                return;
+            }).then(() => {
+                resolve({
+                    creators: db.collection('creators'),
+                    icons:    db.collection('icons'),
+                    levels:   db.collection('levels'),
+                    queue:    db.collection('queue')
+                });
+            }).catch(err => {
+                reject(new Error(err));
+            });
+        }).catch(err => {
+            new Error(err);
+        });
     });
 };
 
-const find = (collection, query, projection) => {
+const find = (collection, query, projection, throttle) => {
     if (projection) {
         return collection.find(query).project(projection).toArray();
-    } else {
-        return collection.find(query).toArray();
     }
+    if (throttle) { // specific boolean for querying for creators
+        return collection.find(query).sort([['updated', -1]]).limit(5).toArray();
+    }
+
+    return collection.find(query).toArray();
+};
+
+const distinct = (collection, key, query, options = {}) => {
+    return collection.distinct(key, query, options);
 };
 
 const deleteMany = (collection, query) => {
@@ -50,6 +84,7 @@ const aggregate = (collection, query) => {
 module.exports = {
     connect: connect,
     find: find,
+    distinct: distinct,
     deleteMany: deleteMany,
     insertOne: insertOne,
     insertMany: insertMany,
