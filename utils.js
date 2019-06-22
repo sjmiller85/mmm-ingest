@@ -28,7 +28,7 @@ const checkIfErrorInRequest = (body, url) => {
         if (url.includes('level')) {
             // It was a level
             body.type = 'level';
-            body.id = url.substr(url.lastIndexOf('/') + 1);
+            body.id = Number(url.substr(url.lastIndexOf('/') + 1));
         }
         if (url.includes('name')) {
             // It was a creator
