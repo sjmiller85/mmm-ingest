@@ -5,6 +5,7 @@ const utils = require('./utils')
 
 let collections = {};
 let levels = [];
+let avgScoreQueue = [];
 
 db.connect().then(response => {
     collections = response;
@@ -41,6 +42,10 @@ db.connect().then(response => {
 }).then((levels) => {
     console.log('Updating level info');
     return updateLevels(levels);
+}).then(() => {
+    return getAvgScores();
+}).then((scores) => {
+    return updateAvgScores(scores);
 }).then(() => {
     console.log('Update complete!');
     process.exit();
@@ -99,6 +104,7 @@ const updateCreatorInfo = (creators) => {
     if (!creators || creators.length === 0) return;
 
     const updates = creators.map(creator => {
+        avgScoreQueue.push(creator.id); // reserve the id's for updating the average scores
         if (creator.error) {
             const id = creator.id
             return db.updateOne(collections.creators, { id: id }, { $set: { 
@@ -142,7 +148,7 @@ const updateLevels = (levels) => {
                 }
             }, { upsert: true });
         }
-        console.log(level);
+        
         return db.updateOne(collections.levels, { id: level.id }, {
             $set: {
                 id: level.id,
@@ -165,4 +171,37 @@ const updateLevels = (levels) => {
 
 const getOutdatedLevels = () => {
     return db.distinct(collections.levels, 'id', { queued: true }); // return just [ id, id, ... ]
+};
+
+const getAvgScores = () => {
+    const queries = avgScoreQueue.map(id => {
+        return db.aggregate(collections.levels, [ { $match: { user: id } }, { 
+            $group: { 
+                _id: "$user", 
+                score: { 
+                    $avg: { 
+                        $arrayElemAt: [ '$score.score', -1 ] 
+                    } 
+                } 
+            }}]
+        );
+    });
+
+    return Promise.all(queries);
+};
+
+const updateAvgScores = (arr) => {
+    const scores = arr.map(score => {
+        return score[0];
+    });
+
+    const updates = scores.map(obj => {
+        return db.updateOne(collections.creators, { id: obj._id}, {
+            $addToSet: {
+                avgScore: { date: new Date(), score: obj.score }
+            }
+        });
+    });
+
+    return Promise.all(updates);
 };
