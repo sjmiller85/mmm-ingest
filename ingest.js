@@ -137,9 +137,8 @@ const updateLevels = (levels) => {
 
     const updates = levels.map(level => {
         if(level.error) {
-            console.log('ERROR: ', level);
             const id = level.id;
-            return updateOne(collections.levels, { id: id }, { 
+            return db.updateOne(collections.levels, { id: id }, { 
                 $set: {
                     id: id,
                     deleted: true, 
