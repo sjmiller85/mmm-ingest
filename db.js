@@ -50,9 +50,6 @@ const find = (collection, query, projection, throttle) => {
     if (projection) {
         return collection.find(query).project(projection).toArray();
     }
-    if (throttle) { // specific boolean for querying for creators
-        return collection.find(query).sort([['updated', -1]]).limit(5).toArray();
-    }
 
     return collection.find(query).toArray();
 };
@@ -77,6 +74,10 @@ const updateOne = (collection, selector, updates, options = {}) => {
     return collection.updateOne(selector, updates, options);
 };
 
+const updateMany = (collection, selector, updates, options = {}) => {
+    return collection.updateMany(selector, updates, options);
+};
+
 const aggregate = (collection, query) => {
     return collection.aggregate(query).toArray();
 }
@@ -89,5 +90,6 @@ module.exports = {
     insertOne: insertOne,
     insertMany: insertMany,
     updateOne: updateOne,
+    updateMany: updateMany,
     aggregate: aggregate
 };
