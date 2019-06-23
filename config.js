@@ -3,7 +3,7 @@ module.exports = {
 
     dbName: 'mmm-ingest', // MongoDB database name
     
-    httpsDelay: 100, // Throttle the https requests to avoid DOS'ing the dev's server
+    httpsDelay: 0, // Throttle the https requests to avoid DOS'ing the dev's server
 
     threshold: 1200000 // How long before records become stale and need to be updated, 6000 milliseconds = 1 minute
 }
