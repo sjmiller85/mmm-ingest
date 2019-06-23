@@ -16,11 +16,11 @@ db.connect().then(response => {
     // Remove duplicates
     popularCreators = popularCreators.filter((creator, index, self) => self.map(obj => obj.id).indexOf(creator.id) === index);
 
-    return db.find(collections.creators, {}, { _id:0, id: 1, name: 1 });
+    return db.distinct(collections.creators, 'id', {});
 }).then((creators) => {
     let newCreators = []; 
     popularCreators.forEach(creator => {
-        if (creators.indexOf(creator) === -1) {
+        if (creators.indexOf(creator.id) === -1) {
             console.log('New Creator: ' + JSON.stringify(creator));
             creator.queued = true;
             newCreators.push(db.insertOne(collections.creators, creator));
