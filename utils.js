@@ -42,7 +42,6 @@ const checkIfErrorInRequest = (body, url) => {
 
 const runPromisesInSerial = (promises, method) => {
     return new Promise((resolve, reject) => {
-        console.log('Running promises in serial');
         promises.reduce((promiseChain, currentTask) => {
             return promiseChain.then((acc) => method(currentTask).then((res) => [...acc, res]));
         }, Promise.resolve([])).then(results => {
