@@ -120,11 +120,13 @@ const updateCreatorInfo = (creators) => {
                 icon: creator.icon,
                 admin: creator.admin,
                 updated: new Date(),
-                queued: false
+                queued: false,
+                currentScore: creator.score,
+                currentLevelSize: creator.level_size
             },
             $addToSet: {
                 score: { date: new Date(), score: creator.score },
-                level_size: { date: new Date(), score: creator.level_size }
+                level_size: { date: new Date(), level_size: creator.level_size }
             }
         });
     });
@@ -153,14 +155,17 @@ const updateLevels = (levels) => {
                 id: level.id,
                 name: level.name,
                 user: level.user,
+                boss: level.boss,
                 username: level.username,
                 date: new Date(level.date),
                 updated: new Date(),
-                queued: false
+                queued: false,
+                currentScore: level.score,
+                currentDownloads: level.downloads
             },
             $addToSet: {
                 score: { date: new Date(), score: level.score },
-                downloads: { date: new Date(), score: level.downloads }
+                downloads: { date: new Date(), downloads: level.downloads }
             }
         }, { upsert: true });
     });
@@ -196,6 +201,9 @@ const updateAvgScores = (arr) => {
 
     const updates = scores.map(obj => {
         return db.updateOne(collections.creators, { id: obj._id}, {
+            $set: {
+                currentAvgScore: Math.round(obj.score * 100) / 100;
+            },
             $addToSet: {
                 avgScore: { date: new Date(), score: obj.score }
             }

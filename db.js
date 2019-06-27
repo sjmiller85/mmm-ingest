@@ -35,7 +35,8 @@ const connect = () => {
                     creators: db.collection('creators'),
                     icons:    db.collection('icons'),
                     levels:   db.collection('levels'),
-                    queue:    db.collection('queue')
+                    queue:    db.collection('queue'),
+                    creatorbkup: db.collection('creatorbkup')
                 });
             }).catch(err => {
                 reject(new Error(err));
