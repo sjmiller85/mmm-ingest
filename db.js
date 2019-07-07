@@ -48,6 +48,9 @@ const connect = () => {
 };
 
 const find = (collection, query, projection, throttle) => {
+    if (projection && throttle) {
+        return collection.find(query).project(projection).limit(5).toArray();
+    }
     if (projection) {
         return collection.find(query).project(projection).toArray();
     }
