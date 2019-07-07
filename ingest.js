@@ -71,6 +71,7 @@ const queueUpOutdated = (collection) => {
 
 const getOutdatedCreators = () => {
     return db.find(collections.creators, { queued: true }, { _id: 0, id: 1, name: 1 });
+    //return db.find(collections.creators, { queued: true }, { _id: 0, id: 1, name: 1 }, true); // throttled
 };
 
 const queryForInfo = (arr) => {
@@ -202,7 +203,7 @@ const updateAvgScores = (arr) => {
     const updates = scores.map(obj => {
         return db.updateOne(collections.creators, { id: obj._id}, {
             $set: {
-                currentAvgScore: Math.round(obj.score * 100) / 100;
+                currentAvgScore: Math.round(obj.score * 100) / 100
             },
             $addToSet: {
                 avgScore: { date: new Date(), score: obj.score }
