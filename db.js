@@ -32,11 +32,11 @@ const connect = () => {
                 return;
             }).then(() => {
                 resolve({
-                    creators: db.collection('creators'),
-                    icons:    db.collection('icons'),
-                    levels:   db.collection('levels'),
-                    queue:    db.collection('queue'),
-                    creatorbkup: db.collection('creatorbkup')
+                    creators:  db.collection('creators'),
+                    icons:     db.collection('icons'),
+                    levels:    db.collection('levels'),
+                    queue:     db.collection('queue'),
+                    analytics: db.collection('analytics')
                 });
             }).catch(err => {
                 reject(new Error(err));
@@ -86,6 +86,10 @@ const aggregate = (collection, query) => {
     return collection.aggregate(query).toArray();
 }
 
+const count = (collection) => {
+    return collection.countDocuments();
+};
+
 module.exports = {
     connect: connect,
     find: find,
@@ -95,5 +99,6 @@ module.exports = {
     insertMany: insertMany,
     updateOne: updateOne,
     updateMany: updateMany,
-    aggregate: aggregate
+    aggregate: aggregate,
+    count: count
 };
