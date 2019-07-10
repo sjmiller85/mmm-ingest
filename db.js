@@ -36,7 +36,8 @@ const connect = () => {
                     icons:     db.collection('icons'),
                     levels:    db.collection('levels'),
                     queue:     db.collection('queue'),
-                    analytics: db.collection('analytics')
+                    analytics: db.collection('analytics'),
+                    featured:  db.collection('featured')
                 });
             }).catch(err => {
                 reject(new Error(err));
@@ -56,6 +57,14 @@ const find = (collection, query, projection, throttle) => {
     }
 
     return collection.find(query).toArray();
+};
+
+const findSortAndLimit = (collection, query, projection, sort, limit) => {
+    if (projection) {
+        return collection.find(query).project(projection).sort(sort).limit(limit).toArray();
+    } else {
+        return collection.find(query).sort(sort).limit(limit).toArray();
+    }
 };
 
 const distinct = (collection, key, query, options = {}) => {
@@ -93,6 +102,7 @@ const count = (collection) => {
 module.exports = {
     connect: connect,
     find: find,
+    findSortAndLimit: findSortAndLimit,
     distinct: distinct,
     deleteMany: deleteMany,
     insertOne: insertOne,
