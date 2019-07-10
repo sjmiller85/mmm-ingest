@@ -36,7 +36,7 @@ db.connect().then(response => {
 }).then(() => {
     return db.updateMany(collections.levels, { popular: true }, { $set: { popular: false }});
 }).then(() => {
-    return db.updateMany(collections.levels, { $or: popularLevels }, { $set: { popular: true }});
+    return db.updateMany(collections.levels, { $or: popularLevels }, { $set: { popular: true }, $addToSet: { popularDates: { date: new Date(new Date().toLocaleDateString()) }}});
 }).then(() => {
     console.log('All done!');
     process.exit();
