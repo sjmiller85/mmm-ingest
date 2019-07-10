@@ -3,6 +3,7 @@ const utils = require('./utils')
 
 let collections = {};
 let popularCreators = [];
+let popularLevels = [];
 
 db.connect().then(response => {
     collections = response;
@@ -13,6 +14,10 @@ db.connect().then(response => {
         return { id: level.user, name: level.username }
     });
     
+    popularLevels = res.map(level => {
+        return { id: level.id }
+    });
+
     // Remove duplicates
     popularCreators = popularCreators.filter((creator, index, self) => self.map(obj => obj.id).indexOf(creator.id) === index);
 
@@ -28,6 +33,10 @@ db.connect().then(response => {
     });
 
     return Promise.all(newCreators);
+}).then(() => {
+    return db.updateMany(collections.levels, { popular: true }, { $set: { popular: false }});
+}).then(() => {
+    return db.updateMany(collections.levels, { $or: popularLevels }, { $set: { popular: true }});
 }).then(() => {
     console.log('All done!');
     process.exit();
