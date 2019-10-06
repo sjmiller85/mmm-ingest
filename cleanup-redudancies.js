@@ -24,6 +24,7 @@ db.connect().then(response => {
                 newDownloadsArray.push(dl);
             }
         });
+        newDownloadsArray.push({date: new Date(), downloads: level.currentDownloads});
 
         updatePromises.push(collections.levels.updateOne({ id: level.id }, { $set: {downloads: newDownloadsArray} }));
 
@@ -33,6 +34,7 @@ db.connect().then(response => {
                 newScoreArray.push(s);
             }
         });
+        newScoreArray.push({date: new Date(), score: level.currentScore});
 
         updatePromises.push(collections.levels.updateOne({ id: level.id }, { $set: {score: newScoreArray} }));
     });
@@ -56,6 +58,7 @@ db.connect().then(response => {
                 newLevelSizeArray.push(ls);
             }
         });
+        newLevelSizeArray.push({date: new Date(), level_size: creator.currentLevelSize});
 
         updatePromises.push(collections.creators.updateOne({ id: creator.id }, { $set: {level_size: newLevelSizeArray} }));
 
@@ -65,6 +68,7 @@ db.connect().then(response => {
                 newScoreArray.push(s);
             }
         });
+        newScoreArray.push({date: new Date(), score: creator.currentScore});
 
         updatePromises.push(collections.creators.updateOne({ id: creator.id }, { $set: {score: newScoreArray} }));
 
@@ -75,9 +79,9 @@ db.connect().then(response => {
                     newAvgScoreArray.push(as);
                 }
             });
+            newAvgScoreArray.push({date: new Date(), score: creator.currentAvgScore});
+            updatePromises.push(collections.creators.updateOne({ id: creator.id }, { $set: {avgScore: newAvgScoreArray} }));
         }
-
-        updatePromises.push(collections.creators.updateOne({ id: creator.id }, { $set: {avgScore: newAvgScoreArray} }));
     });
     
     return Promise.all(updatePromises);
