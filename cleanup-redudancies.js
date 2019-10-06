@@ -76,13 +76,16 @@ db.connect().then(response => {
                 }
             });
         }
-        
+
         updatePromises.push(collections.creators.updateOne({ id: creator.id }, { $set: {avgScore: newAvgScoreArray} }));
     });
     
     return Promise.all(updatePromises);
-}).then(() => {
-    console.log('Done!');
+}).then(res => {
+    setTimeout(() => {
+        console.log('Done!');
+        process.exit()
+    }, 60000);
 }).catch(err => {
     console.log(err);
     process.exit();
