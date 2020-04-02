@@ -2,14 +2,16 @@ const config = require("./config");
 const utils = require("./utils");
 const mongo = require("./mongo");
 const ids = require("./ids");
+const fs = require("fs");
 
 mongo.connect(config.dbUrl, config.dbName, async () => {
   const startTime = new Date();
-  console.log(`Running ingest -- Start time: ${startTime}`);
   let creatorArray = [];
   let levelArray = [];
 
   let levels = [];
+
+  utils.writeToLogFile("Starting ingest");
 
   //
   // Begin code for import of old IDs
@@ -40,7 +42,7 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
     .getNonExistentCreatorIDs(popularLevelCreatorIDs)
     .catch(utils.handleError);
 
-  console.log(
+  utils.writeToLogFile(
     `# of creators from the popular API to add: ${nonExistentCreatorIds.length}`
   );
 
@@ -74,7 +76,9 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
     (e, i) => queuedCreatorIDs.indexOf(e) === i
   );
 
-  console.log(`# of creators queued: ${uniqueQueuedCreatorIDs.length}`);
+  utils.writeToLogFile(
+    `# of creators queued: ${uniqueQueuedCreatorIDs.length}`
+  );
 
   // Get the creators from the MMM API
   for (let id of uniqueQueuedCreatorIDs) {
@@ -138,7 +142,7 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
     (e, i) => queuedLevelIDs.indexOf(e) === i
   );
 
-  console.log(`# of levels queued: ${uniqueQueuedLevelIDs.length}`);
+  utils.writeToLogFile(`# of levels queued: ${uniqueQueuedLevelIDs.length}`);
 
   // Get the creators from the MMM API
   for (let id of uniqueQueuedLevelIDs) {
@@ -168,11 +172,7 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
     })
   ).catch(utils.handleError);
 
-  const endTime = new Date();
-  console.log(
-    `Finished ingest -- Run time: ${(endTime.getTime() - startTime.getTime()) /
-      1000} seconds`
-  );
+  utils.writeToLogFile(`Finished ingest`);
 
   process.exit();
 });
