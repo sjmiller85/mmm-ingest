@@ -11,8 +11,6 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
 
   let levels = [];
 
-  await mongo.models.queue.purge();
-
   //
   // Begin code for import of old IDs
   //
