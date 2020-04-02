@@ -97,7 +97,9 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
 
   // Add any icons to the db if they don't exist already
   for (let id of iconsNoDups) {
-    await mongo.models.icons.addUserAvatar(id).catch(utils.handleError);
+    if (id >= 0) {
+      await mongo.models.icons.addUserAvatar(id).catch(utils.handleError);
+    }
   }
 
   // Update the creators collection

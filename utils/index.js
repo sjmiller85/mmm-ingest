@@ -9,7 +9,7 @@ const getCreatorsFromArray = arr => {
 };
 
 const handleError = err => {
-  console.log(err);
+  writeToLogFile(err);
   process.exit();
 };
 
