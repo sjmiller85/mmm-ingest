@@ -37,18 +37,12 @@ const getUserAvatar = async id => {
     .get(url, {
       responseType: "arraybuffer"
     })
-    .catch(e => {
-      if (e.status === 404) {
-        error = true;
-        return unknownImg;
-      }
-      console.log(e);
-      utils.writeToLogFile(e);
-      process.exit();
-    });
+    .catch(e => e.response);
 
-  if (error) {
-    return avatar;
+  if (avatar.status === 404) {
+    return unknownImg;
+  } else if (avatar.status !== 200) {
+    return utils.handleError(avatar);
   }
 
   const img = Buffer.from(avatar.data, "binary").toString("base64");
@@ -62,19 +56,14 @@ const getBossAvatar = async id => {
     .get(url, {
       responseType: "arraybuffer"
     })
-    .catch(e => {
-      if (e.status === 404) {
-        error = true;
-        return unknownImg;
-      }
-      console.log(e);
-      utils.writeToLogFile(e);
-      process.exit();
-    });
+    .catch(e => e.response.status);
 
-  if (error) {
-    return avatar;
+  if (avatar.status === 404) {
+    return unknownImg;
+  } else if (avatar.status !== 200) {
+    return utils.handleError(avatar);
   }
+
   const img = Buffer.from(avatar.data, "binary").toString("base64");
   return `data:${avatar.headers["content-type"].toLowerCase()};base64,${img}`;
 };
