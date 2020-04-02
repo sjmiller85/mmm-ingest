@@ -6,7 +6,7 @@ const AnalyticsSchema = new Schema({
   date: {
     type: Date,
     required: true,
-    default: new Date().setHours(0, 0, 0, 0)
+    default: new Date().setHours(new Date().getHours(), 0, 0, 0)
   },
   creators: { type: Number, required: true },
   levels: { type: Number, required: true }
