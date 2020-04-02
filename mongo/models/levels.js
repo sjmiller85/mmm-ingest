@@ -40,6 +40,7 @@ const getOutdatedLevels = () => {
       updated: { $lt: new Date(Date.now() - config.threshold * 60 * 1000) },
       deleted: false
     })
+    .sort({ updated: -1 })
     .limit(666)
     .exec()
     .catch(utils.handleError);
