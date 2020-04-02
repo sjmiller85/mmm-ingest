@@ -1,25 +1,16 @@
-const db = require('./db');
+const config = require("./config");
+const utils = require("./utils");
+const mongo = require("./mongo");
+const ids = require("./ids");
 
-let collections = {};
-let doc = {
-    date: new Date(),
-    creators: undefined,
-    levels: undefined
-}
+mongo.connect(config.dbUrl, config.dbName, async () => {
+  const creatorCount = await mongo.models.creators.getCount();
+  const levelCount = await mongo.models.levels.getCount();
 
-db.connect().then(response => {
-    collections = response;
-    return db.count(collections.creators);
-}).then((res) => {
-    doc.creators = res;
-    return db.count(collections.levels);
-}).then((res) => {
-    doc.levels = res;
-    return db.insertOne(collections.analytics, doc);
-}).then((res) => {
-    console.log(res);
-    process.exit();
-}).catch(err => {
-    console.log(err);
-    process.exit();
+  await mongo.models.analytics.addAnalytics({
+    creators: creatorCount,
+    levels: levelCount
+  });
+
+  process.exit();
 });

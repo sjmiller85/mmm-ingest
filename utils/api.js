@@ -1,0 +1,82 @@
+const axios = require("axios");
+const fs = require("fs");
+const utils = require("../utils");
+
+const getPopularLevels = async () => {
+  const url = "https://megamanmaker.com/megamaker/level/?sort=popular";
+  const popularLevels = await axios.get(url).catch(utils.handleError);
+  return popularLevels.data;
+};
+
+const getCreatorData = async id => {
+  const url = `https://megamanmaker.com/megamaker/user/${id}`;
+  const creator = await axios.get(url).catch(utils.handleError);
+  return creator.data;
+};
+
+const getLevelData = async id => {
+  const url = `https://megamanmaker.com/megamaker/level/info/${id}`;
+  const level = await axios.get(url).catch(utils.handleError);
+  if (level.data.error) {
+    return { id: id, error: true };
+  } else {
+    return level.data;
+  }
+};
+
+const getUserAvatar = async id => {
+  if (id === 107) {
+    return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAGAAAABgCAYAAADimHc4AAABhWlDQ1BJQ0MgcHJvZmlsZQAAKJF9kT1Iw1AUhU/TakVaHOwgIpihOlkQFXGUKhbBQmkrtOpg8tIfoUlDkuLiKLgWHPxZrDq4OOvq4CoIgj8gTo5Oii5S4n1JoUWMFx7v47x7Du/dBwiNClPNwDigapaRTsTFXH5FDL4iAB/C6MawxEw9mVnIwrO+7qmX6i7Gs7z7/qywUjAZ4BOJZ5luWMTrxNObls55nzjCypJCfE48ZtAFiR+5Lrv8xrnksMAzI0Y2PUccIRZLHSx3MCsbKvEUcVRRNcoXci4rnLc4q5Uaa92TvzBU0JYzXKc1hAQWkUQKImTUsIEKLMRo10gxkabzuId/0PGnyCWTawOMHPOoQoXk+MH/4PdszeLkhJsUigNdL7b9MQIEd4Fm3ba/j227eQL4n4Erre2vNoCZT9LrbS16BPRtAxfXbU3eAy53gIEnXTIkR/LTEopF4P2MvikP9N8Cvavu3FrnOH0AsjSrpRvg4BAYLVH2mse7ezrn9m9Pa34/E3FygRzFY1wAAAAGYktHRAD/AP8A/6C9p5MAAAAJcEhZcwAALiMAAC4jAXilP3YAAAAHdElNRQfkBAENCBGmjAs4AAAAGXRFWHRDb21tZW50AENyZWF0ZWQgd2l0aCBHSU1QV4EOFwAAFoJJREFUeNrtnXmUXXV9wD/f3733vTdv9n0mKyEhgSwQJguEhCVGK0IrFtRW29Ny1Noel1aKte5WtNWilh4rYLUWj6f1qKV6tMBRQIRAIJAQAkkmhASykWSSzL697d7fr3/87rw3M28yeZNMZiYwv5OcmeS9+9u++3qFO+98FljNqYYS+O0OSGZAay679UuUzr2EcRsCrz/6Ew48/Svo7WTNHf+LEy3CaJ9NW/8ZVAR0iiuWfwIvUlLYlAIH9j7I4c5m0GnWrvx7RLkEqQTPfPEWKKmwa335fpxYfPyO4sDWu/6aRFcrxDzYsAy0GfUZBaSZHpM23FN+0tkLqQyYgAVXvwdRLhiIlFWN/y4qYrCwATKlluIARLGg8TpEFAj0Hd6LGCl4yuJIDRc1rMMYDaJy1LxsNnjFQ9car2Fgzrqb0H4Go332HX3SkoUxUFcBShUIABE40gaH2qG3k7qv3IGKRM8dGlQVw/xG0Cm7NiCiaJi9Nkvazfd9lbaDzYXNl06w4uPfpqhudv65Fs4GFbVrjTMAjIbapg0A6HSKfV+4x7K7TADXL4eIGpEFnR9DztmXJ3XzQykgnck94CgojYIXP7fnMeC6cSqiNQTGJ/ATGBPYzXnx7HdiFXVUzMwUNmWQQRwn+28/02+xMkhTGqvHEZdAZ84toASojEMsCoGBjG8PAhDxRgCACDy6A3wDWsP6S2DxHNDp8eeVw0bjnLU0zl2LCDy39W6SmQ6UU8TalbdjjCXtC2/68Jjuy2h7XhF47qV70UGCmFfJ6pUfxZhB3zlXQwm8tclqcUrBb1+ErhS4AjeuYGATQynAdUA0aLHA0iEwzvEwJkQOBa7yQEXxVCT/Qs9weCpCymhc5WUBOiFDh1iAthzFU/bnaYWw0cyqXEKkpg5jAquJTMQw0Fi9jCBIIQg9B1/GjAMnmFV1KQaD40Q56wkLXVcU8+rWIOIgyuGwd4A0qQK1IBNQN2MV8cZ5EyqqjIH6WWvCLfhs+szvQ3H52U3a18Xarz2AOG6O2iYCAMpl5gUbslpcW+xh0rSPwQ6Y7GEMOC4o5+zmcdyJu/UzMsSCICeEo67lW76ZfE1OhEjNTNzo2bkK/Hhp1raY1OE5EHOtQA6CQUL4we3hTjXcvMpKb6OhODK59++4XPGpfx8fYgomm5qBFXMhVWIVm59vAVeFAPBUTloZAzpUOaYA1U76xY2rRmTsX2OsNpQFwKDTzqlchiiFMRrHi026DOjrOYIgFjn6M6f1LA4ZRR4owWAoLp05uWzIQHX5Asr9mRitOWS2ZJ0QOQD4KebMvz5ndJnJRpiAF3b/Z86Q2bgTOvsLezgwcN1iKC8GneaqVZ9FiTuZuETj3GuylHDIvxc8L18LMkYjxpkSFCsD+ps4FntdD9wC5ZIYqz2Fz08Jz5DJ3fGUVkMHNmiMBuVZy1gEvBhECyYfUB4oDx9j5wrnnTCjsmA1dAoNUfD8tu+SSHfiOEVcc8Wncm6DFWeGcaJg03N3EQQJiiIVrGz6yMS5Is43AAA44oaY71plzHB2MkmDq1wC49m5p5wh1lBmf8t4TJb1lenpIEglEFFUFc+i3NSj1NDLSiXaMTooGP0jsUqUYwVdXdmFaO3jiEfyZEvI5gzRqkZETTRLEphVCV5RCICmBSGmZCbn/gVaNj/EwSf+B7pauepbv8WJRof4bUTBvld/RUf/0YINiBVLPkRRSSPGwAULbrTKUSrF07dvgPIa6GplzTceHtegfMHaxaqLrYwC3JxzfPL0TlEOROMQL8MYPeJWlDjZTZ8eADKEms1gDSRell1rUvXSEeMBU0wb6jixExF7mXXVS6g1iwt+PtF3gmT/SYwxVNYtnXLaz5QVwjkIaJoP/t/45AXVLs5lRkyxcf4E5d+gw60rnp01/afHxIyakrlWpgHuosV/nCespsc5VDhEccmSP8lRwPSlT44SdB4IYeBYKzgx8JNw6RgxpTsBLe0QJKdEbOM81IIMPLMXisugrwveNkYHzvEeeOEg9HXDjVMXAlNbC5IpMse0GvrGHdMAmAbAm9wQmxK7KIvC/FpIx3PBc6WYd/2tKOVijCbRcpCkW6AzToSi2lnMv+69aO3nCiNE4JIZECm2a6lpAAyYhiCzhhRNiHKYee277e8O7LrvK7Tv31XYfOkEK/7mO/kFGkpg8QWDCjTUNAAKtyCl8AtTzpuDBekgw4hWjjanMX7MoDRtQcSh2Cslo6NonUYCCe8xkv26Fy+juKqhoH0FfmZIpEsHtg5R6zQRrwxPRexaQTrnpg70aXRWYxFA8vXcgcjbGSHWusfMk8C6MT+o4MXt36c7eTyP/7JpJxzrOvXDGQ3vXRumQQY0XfIhiitm2mKK5+8mmR5aoDGw3pkWaGza+i1boBGpZPUKW6AhAlufv5f+dJtFmJ9tIpslONLwNdzQBKVDI2hlsXouW/4XZxzoPysKcMJiijw+Gy2FEhn9MCqazUM1aHsABa6cwwINGVSgMagYBAyUVmTTBUcmK23dIsPO6yhvYllQOtFha65EqCy9gLJ4IwAH9z0Voqnmj65YQ5EbzSOM3R1wLA2CcKhrDzqsHkl0tSAoEKG2fAHVOoOIou/ofhiHEo3GiosxRqOUR1/XUTAGUQq/swtSvSiEOVffhMGQMXBtDUSdfMLe0n6InR29YDRzF1im4TjR7JwGQ7x0xpiib2MGQOuJF3ntxGbQKa5s+jvcSBw0HPz+PRCLQ3sP63/yCcqrq/MIwzsEbq+F05Gvfxjd3wPG8LL5JVSWgE5x1crPoNwIxvfZ9KnrbZnn2YzeTtbe+WvEddF+mqe3fi2kPgVbdkFvGideyuxP/wNGQ1LDhoVQ7OXL9a6772Hn0y9Csp/Zb/sKKPDT/Wze9o2sZnXVys8izjkEgIjkUgbNgLA14Ii9ZUcwxuTFFvQgvowJUUqJ/UBUdk4zMKcxEIkVno54qhGJZfdpjBma7jiwB5HcvkIWNXz/ZuCc4RntF8V+ILk0yHFnQSLQ1vKSNWiAaLSCxXOuR0ToeuUFTBDgAF/49KfDS9bE4sUj+sRSnftobe1GlELrdG6Blg7oSUCQpm3GC1ntZ8mffh5zls40MdB2ckdOGzp4EpyI3VAmyGpHrce2Y7SmU2vMhcsYngdpNKy8dj2XNK1AAT9/aSMBII7DknnvwhiDAO0nd4QKk0t1w6WnDXK5BbBQDrY8TV+mBzBcNv89lFbOQxzY+eCX6Ti8h8pIhCU/+uHoBZUCqY5mXj6yx2JRkMlB5kBbVjt6Zfbj4DpEnRirmz5+1lE6EXhu27+RCpLgB7DjeJ62EwQZdh951GpDmRSsWZgPAAMXXLx4wEjnO3ffSkc6TeXsRSz94JcwQahZvXAPCb+PYq+U6sZLTyvCpn1BbwRL2BXDDA+CUQoolBLKMxno6QcM77nuagRBRNjz8stsP3zMUkNPP7gO2tEk+9uy6YjReDUyBh6bTnZaQ0s56J5+CJLUicNb3rEBjUEpxeNPPUNLf8JiaXe/RfN0inrHUOaZUdRvwRUzdQBQLHB1hUYHehTvgOKZtlZ4Yje09/Cuhx/AcQQRePhnP2X74V9aPXzTXsCQiThsiX8/LO1JckXTJ/EipQWznaOHN/J6xy7L7p7aAemA2fNmc/O/fB7tg3Jh/6uv0fLqAavjPx42AjnSzZrbM1SXB6OepVjg5FTyBQ2Ul41myRsJe1C4Cq0DRFyrgAxm9E6YVugoe0sYYOyJwyKOfV6FczkGI4IJbCGoBAy1MQZUx4gaqG0fVbCPGwtqP7Eje4NVdctGrqVq6YBkJxjN6qU+DbVWL+6MQseZrBr1aN67E+U4iAhHTraMYHkaeL3VQjbI0Nm4Cycatz0w6paNOG3HiR2hhiv0HzsE7a32PIG9sa5EP7v2NhMEAY7j0NHXd9YXOCsKb6kFHVjhfOBEB4cT3RDzT4mp7Sd2ZO/ZbT7061BRz7C2bqktihuuP+47Ce0tEGguvNlnbg04DvzuTFX0SISvPftwqIMDhw6NbPq/eCirHe2pfxSiEQRhXf2yPO1IBJoP/QYz4ADa+xoc6RzynVd7e7jjmYfCChqBnu6zBkBlBBbX2NJfx4GSA8fheCtUjZxtbjA0H3wgm2g8rQW9KeMBAiSSoQVM2EtnmGB3HdavarIGjjHsLm+k17EWbCrRNYKPSKgrmQPGEIhw6UVximYnERF+t2UbfX5gMb8/laMAbd6kAHAUPNY8VPAOkz0zysv489tvs6QtcP9eOBo2G3ly85dheLmR8bn6yi9ZjmXglhugOm7Zwp6//Ch72zog6cMjOwad/s0cETvN4Q2GILDCDRlS02BT1vMAoIbUmuiBZ8O5ptKlTw0AjEXFBRaXw4Xhha5cft0IaqkhVp0DQOw8CbaeHwAwsHCwd7tuzRtGCE9rQdMUMIzXlEWtQI6PY5/SeBQyYVygOzWl8kWnFgD8ANZcbJsbRYrGJ63cACsXQDph/f8PbrPzT7OgUxgIxox/t0atc716pli6tDu/bnVW0PV2Hsh+UFTSkGucegrBuGrdOpYsX44S2L6zGWMMWhsuXjifWDSah4rOzGXMX18Poti/8X60P6wRq84wr2YFKhKhwh0/4qyoaWK+76PTafbrLQwPtijXY9417wajeTXl24hZnnNP2PfaAfr6+xERbrzlZrSBeEnJ6YNGAn2dh7JRxQvr12bNHrdxzrVZX8rTW+8iMLZhd9OiPxsVAFrDius2WKTVhqYbboKyOLT0cOTxHxCrjeZBLLLgShqrBHHg0OYH8gGQSdAw52qcSIy4YtxYUNWstcQ0BOkk+zN3wTDkcCIxZlzzB5jAuqAkEuQtrpTix794iDse3ATd/fz3Q79ElI0ln45YReC1Q4/QlWrDEY+rVt6WBZoaDmVLojI2Hjtg4Aw0Jx3lqwPx9lOizbksWhtlzYFcgNG8EyJk3elDzl4Qc7X3KsMsfregC15UD0mbwPRKn0vXCevhXVqTk2cLPvhFipSiJdDsCco40Wc3ubRYZ8/+9hmaNTWCo4TbbvkYXf5Q1ElqzTtmebihG3+8ZPBbGuzF+r5H6we+SmxYjmm5q7hroSHQxrKVQdGwneE5HIHORdezrPxqEoNQPhPAztYwKURB9/xGmFEMsYqCDlAYo60th4zlCduSLqVtkNBwcdUAAISqhU1EBKIG9gZQmrBBjSwAgIsqLQ04CqoXXArDgk4RDXMqIeKMHzEYA3PC3q/pwKXsoiaKhhFptQMr6n1GCujtSigUFiG66y+ivBSKBu3L1/BYKxTZvDLaq8vBd8ErLHo3bYhNJTtgVuVSDDYrKZPupa/7dUSEuvKLbCW9gcBP0Nf9Or3agJkBOCCwsizMNjE5FinAiXS+PHEEFpTC7GEYF5hz26hdCawuD6Oeg0ZUwYmUDATOhiswWQqeGYdiN5QT2Q8CuruPopXl7w0Vi9AmQIlDX9cR604XoapsHuV6lk3BHDz/kOxoyS166NVfc7BtezbdTrkeAhw58LhNTcyk+I/3f5J4UfGQjQ6XTadSEJzTyPRzaGmMOIICWMRIZ+xP9PGhH38TPJuauHbV5xDHRfsZnt76T9mUxTUrPoUTNmnilIXaA+5cCZfLptuZgT9DUxMLuDg1SRfNGNdVZ/Hs4NREG0AKvz3s/0eaYOzWTlcCDh6HdII9Jw0DDacW10zcpTafzM8dMAYW106YvU5za6i59Rs4cMy6TvwENJkzlwGFASAJzUeht5MnTxrcuOWpS2onrtnHIyfBGwaAzEQCQGBjq5VZfr+B7fttFndfF9x8XvuC3oRaULLvREjChqKSutAhBkVFtcwqX4Q2mmR/a7aLoVNSyqzL16ODgFTnCfz+blwBmDlhm15ako85E90KNNV6BN9Y98aMq96Jchx7J4lWJO2itc+MiqUoUWjjD0qrNCR6T2QtYndr8w/CE6RZu/oL2Q9qZjRRSxOi4Lmt3yHp22KKyxa+j/qmDYgDL33383Tu30V5LALX/HTChMBb5068F2O4ENh979/SlUxTMW8Jl/7VV7PZ0Zu3fpu030fMLWX1yo9lS6ty8WrD87u+a+PagJsNbg/Ptxtce6FcGwQXky1gsEqSB9EilDex7xqYCj2OlFcExkEcj2xnZAkbz4qLo9yhiQRDAOhlkwpcXg/FufHpiG/OqRflMYi4iCgyQe51k91dr5LJ9ALQsGoDDZevRwnsfHZz6I7WLLysiWhR0RuKV4vA/t3N9HV3ISLMeMcHaDDWCdl2bEfWmenrTOgjStN+fFeuWXd7v3W1GmPfUhgCQFj/vvwyVW1g7UKoGKVLoU5x5fLbcCPFYAxPfeEPbT/Ojh7u/a/7KK+ueUMBQDnws3vu5udPbIJUP+u+8gsQwU/3sXn7XfnVosNN8I27oCc1rQVNPV9QTcnITDbjQ39yFApIk+5uQ3sJjDHULV2HOA7H0z49Xd1ZQVJePTblvDedK4jTqc7xwd5oBdYXDyVjFFddbScBQSlFJl5D/cWrMEFAqqvVspxMv013VKcJJJQWQdQbQZ5/8xsjVMoLvPQa7G8bfXeZhJU+kSjX/OP9GG0t740/vBO2PQl9KX78xMNjcpb9cA+0+vY9Ys8/ewc4Z5kdEaRYccUXEcelxoVbF40tJfT91/4eFEehu4uVd95PUXUdomDj594N6ZTNb/VOI+/SAbxzhX1LVR4F6FO4AEVOn8bnWkecciMMekcC9Z7H8YpSKBr75XkCMQGjsA4udZYaloJY6Kv3zsTTWlMG0QjEFGJ09owqVoIutIR2IAI4wl27p9TzasugqLAFjCg692y3EFCKZHEGFjWA0bzy4rbsnG7DxahYMdrAvIoR/DnA8kob5DBGsery9WOqCxv5KAGxGpXFJ3OK4+7vDF3hApkjuzGZhP1w2SyL5can+/XdRFqPgijMgprC+ycYk/cOyRyu33nnGTXryFvgwW12EV/DhqU2GUoEHgoBkAp7+NTOJGngE5ec85e0Fjy0gX/dbSlPHNj9o6/T+tpL9sMbmsh293h+r+3GGGi4sWlc3sw0flrQkIj7qWXRwFupBnO7KaHnn24zwpBq+vHTgsbLSlmzIPf7sTZLCYMP5EU4vuVhvJIKMtqwsbfK9vYwhmjNZTixKrSBFQ3nLoPc1/B8S647Qf+xzZggidHQsq0dTwkiit7WI7mH9hzOuQRmVsHc2kHYNFUAAFBTnlNlXjsOrb15lszhrY9kb+J7RU3ZdjWXL1pAcVkVCQ2X159bVvNURxhAV/DiKzvpTnfYDx7bNjLkXw2LUQNt301WMr4W/rQhNumG2Lh7yoCGciiPj/6ltq6QsWr64vvQxT0kteFgcQzPtcLCLZuXlfGNpWNjTa39tiIJwO+2fYcyvqH3QBI/ZDWZE62Q6bX7WVQ/uhAwBjz3fACAgdl1p7e4frPdti4DXtnyPXsJGc2XbrgcXAdxili7wjbrSGj4yMLCASACu9pgZ2/Ysuz5BzBBwmZfP/TCoOy98Ken4O3LJ6Vob3LT02WI5Wfd3WEfn8hA3d5ZvNp4wJ6MCKQG+gOJTKnXmUwOAIyBy+bkq3PGZFtT+kGG45tt4XXawNbD+W3ERqOAfa1wPGVzMn0VJgErBasvzNdghEkLMkwSAIC6ytFdODrDKw/el+U73z0b3fPGy+3lK4GGqlPvaRLGtBY0BVjQRqB1+iomZXj/D1ZQEQtkOmKaAAAAAElFTkSuQmCC";
+  }
+  const url = `https://megamanmaker.com/bot/useravatars/${id}.png`;
+  const avatar = await axios
+    .get(url, {
+      responseType: "arraybuffer"
+    })
+    .catch(utils.handleError);
+
+  const img = Buffer.from(avatar.data, "binary").toString("base64");
+
+  return `data:${avatar.headers["content-type"].toLowerCase()};base64,${img}`;
+};
+
+const getBossAvatar = async id => {
+  const url = `https://megamanmaker.com/bot/bosses/${id}.png`;
+  const avatar = await axios
+    .get(url, {
+      responseType: "arraybuffer"
+    })
+    .catch(utils.handleError);
+
+  const img = Buffer.from(avatar.data, "binary").toString("base64");
+
+  return `data:${avatar.headers["content-type"].toLowerCase()};base64,${img}`;
+};
+
+/*
+const checkIfErrorInRequest = (body, url) => {
+  // Checks if the get request returned an error, indicating it doesn't exist or was deleted
+  if (body.error) {
+    if (url.includes("level")) {
+      // It was a level
+      body.type = "level";
+      body.id = Number(url.substr(url.lastIndexOf("/") + 1));
+    }
+    if (url.includes("name")) {
+      // It was a creator
+      body.type = "creator";
+      body.id = url.substr(url.lastIndexOf("=") + 1);
+    }
+  }
+
+  return body;
+};
+*/
+
+module.exports = {
+  getPopularLevels,
+  getCreatorData,
+  getLevelData,
+  getUserAvatar,
+  getBossAvatar
+};

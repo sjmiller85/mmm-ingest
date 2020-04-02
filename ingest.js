@@ -1,215 +1,180 @@
-const ps = require('ps-node');
-const config = require('./config');
-const db = require('./db');
-const utils = require('./utils')
+const config = require("./config");
+const utils = require("./utils");
+const mongo = require("./mongo");
+const ids = require("./ids");
 
-let collections = {};
-let levels = [];
-let avgScoreQueue = [];
+mongo.connect(config.dbUrl, config.dbName, async () => {
+  const startTime = new Date();
+  console.log(`Running ingest -- Start time: ${startTime}`);
+  let creatorArray = [];
+  let levelArray = [];
 
-db.connect().then(response => {
-    collections = response;
-    // Find outdated creators
-    console.log('Queueing up creators');
-    return queueUpOutdated(collections.creators);
-}).then(() => {
-    // add the outdated creators to the queue
-    console.log('Get an array of outdate creators');
-    return getOutdatedCreators();
-}).then((creators) => {
-    // HTTPS requests to MMM api
-    console.log('Querying for creator info from MMM API');
-    return queryForInfo(creators);
-}).then((info) => {
-    creators = preserveLevelInfo(info); // returns var info sans levels array
-    console.log('Updating creator info');
-    return updateCreatorInfo(info);
-}).then(() => {
-    // Update the level data we got from creators
-    console.log('Updating level info from creators');
-    return updateLevels(levels);
-}).then(() => {
-    // Find outdated levels
-    console.log('Querying for remaining outdated levels');
-    return queueUpOutdated(collections.levels);
-}).then(() => {
-    // All that's left is to clean up the remaining levels
-    console.log('Getting outdated levels');
-    return getOutdatedLevels();
-}).then((levels) => { // levels is an array of id's unlike obj's from creators
-    console.log('Querying for level info from MMM API');
-    return queryForInfo(levels);
-}).then((levels) => {
-    console.log('Updating level info');
-    return updateLevels(levels);
-}).then(() => {
-    return getAvgScores();
-}).then((scores) => {
-    return updateAvgScores(scores);
-}).then(() => {
-    console.log('Update complete!');
-    process.exit();
-}).catch(err => {
-    console.log(err);
-    process.exit();
+  let levels = [];
+
+  await mongo.models.queue.purge();
+
+  //
+  // Begin code for import of old IDs
+  //
+
+  const oldIds = ids.ids;
+
+  const freshIds = await mongo.models.creators.getNonExistentCreatorIDs(oldIds);
+
+  for (let i = 0; i < 10; i++) {
+    await mongo.models.queue.addToQueue("creator", freshIds[i]);
+  }
+
+  //
+  // end code for import of old IDs
+  //
+
+  // Get levels from MMM's popular API
+  const popularLevels = await utils.api
+    .getPopularLevels()
+    .catch(utils.handleError);
+
+  // Get the user IDs for the popular levels
+  const popularLevelCreatorIDs = utils.getCreatorsFromArray(popularLevels);
+
+  // Get the ids of creators (from the popular API) that aren't in the db
+  const nonExistentCreatorIds = await mongo.models.creators
+    .getNonExistentCreatorIDs(popularLevelCreatorIDs)
+    .catch(utils.handleError);
+
+  console.log(
+    `# of creators from the popular API to add: ${nonExistentCreatorIds.length}`
+  );
+
+  // Add the ids from above to the queue
+  await Promise.all(
+    nonExistentCreatorIds.map(e => {
+      return mongo.models.queue.addToQueue("creator", e);
+    })
+  ).catch(utils.handleError);
+
+  // Get the outdated creators in the DB
+  const outdatedCreators = await mongo.models.creators
+    .getOutdatedCreators()
+    .catch(utils.handleError);
+
+  // Add the outdated creators to the queue
+  await Promise.all(
+    outdatedCreators.map(e => {
+      return mongo.models.queue.addToQueue("creator", e.id);
+    })
+  ).catch(utils.handleError);
+
+  // Get the creators from the queue
+  const queuedCreators = await mongo.models.queue
+    .getQueuedCreators()
+    .catch(utils.handleError);
+
+  // Remove any possible duplicates
+  const queuedCreatorIDs = queuedCreators.map(e => e.id);
+  const uniqueQueuedCreatorIDs = queuedCreatorIDs.filter(
+    (e, i) => queuedCreatorIDs.indexOf(e) === i
+  );
+
+  console.log(`# of creators queued: ${uniqueQueuedCreatorIDs.length}`);
+
+  // Get the creators from the MMM API
+  for (let id of uniqueQueuedCreatorIDs) {
+    creatorArray.push(
+      await utils.api.getCreatorData(id).catch(utils.handleError)
+    );
+  }
+
+  // Get an array of user icons
+  const icons = creatorArray.map(e => {
+    return e.icon;
+  });
+
+  // Remove any duplicates from the icon array
+  const iconsNoDups = icons.filter((e, i) => icons.indexOf(e) === i);
+
+  // Add any icons to the db if they don't exist already
+  for (let id of iconsNoDups) {
+    await mongo.models.icons.addUserAvatar(id).catch(utils.handleError);
+  }
+
+  // Update the creators collection
+  await Promise.all(
+    creatorArray.map(e => {
+      return mongo.models.creators.updateCreator(e);
+    })
+  ).catch(utils.handleError);
+
+  // Get the levels from the creator array so we don't have to double the load on the API
+  creatorArray.forEach(e => {
+    levels = levels.concat(e.levels);
+  });
+
+  // Add any levels from the creators array that don't already exist in the db
+  await Promise.all(
+    levels.map(e => {
+      return mongo.models.levels.addLevelIfDoestExist(e);
+    })
+  ).catch(utils.handleError);
+
+  // Get outdated levels
+  const outdatedLevels = await mongo.models.levels
+    .getOutdatedLevels()
+    .catch(utils.handleError);
+
+  // Add outdated Levels to the queue
+  await Promise.all(
+    outdatedLevels.map(e => {
+      return mongo.models.queue.addToQueue("level", e.id);
+    })
+  ).catch(utils.handleError);
+
+  // Get queued Levels from the queue collection
+  const queuedLevels = await mongo.models.queue
+    .getQueuedLevels()
+    .catch(utils.handleError);
+
+  // Remove any possible duplicates
+  const queuedLevelIDs = queuedLevels.map(e => e.id);
+  const uniqueQueuedLevelIDs = queuedLevelIDs.filter(
+    (e, i) => queuedLevelIDs.indexOf(e) === i
+  );
+
+  console.log(`# of levels queued: ${uniqueQueuedLevelIDs.length}`);
+
+  // Get the creators from the MMM API
+  for (let id of uniqueQueuedLevelIDs) {
+    levelArray.push(await utils.api.getLevelData(id).catch(utils.handleError));
+  }
+
+  // Get an array of all the boss icons from the oudated levels array
+  const bossIcons = levelArray.map(e => {
+    // level might be deleted, check for boss value
+    if (e.boss) return e.boss;
+  });
+
+  // Remove any duplicates from the boss icons array
+  const bossIconsNoDups = bossIcons.filter(
+    (e, i) => bossIcons.indexOf(e) === i
+  );
+
+  // Add any boss icons that don't already exist in the db
+  for (let id of bossIconsNoDups) {
+    await mongo.models.icons.addBossAvatar(id).catch(utils.handleError);
+  }
+
+  // Update levels in the db
+  await Promise.all(
+    levelArray.map(e => {
+      return mongo.models.levels.updateLevel(e);
+    })
+  ).catch(utils.handleError);
+
+  const endTime = new Date();
+  console.log(
+    `Finished ingest -- Run time: ${(endTime.getTime() - startTime.getTime()) /
+      1000} seconds`
+  );
+
+  process.exit();
 });
-
-const queueUpOutdated = (collection) => {
-    const threshold = new Date(new Date().getTime() - config.threshold);
-    return db.updateMany(collection, {
-        $or: [
-            {updated: {$exists: false}},
-            {updated: {$lt: threshold}}
-        ], 
-        deleted: { $exists: false }
-    }, {
-        $set: {
-            queued: true
-        }
-    });
-};
-
-const getOutdatedCreators = () => {
-    return db.find(collections.creators, { queued: true }, { _id: 0, id: 1, name: 1 });
-    //return db.find(collections.creators, { queued: true }, { _id: 0, id: 1, name: 1 }, true); // throttled
-};
-
-const queryForInfo = (arr) => {
-    if (!arr.length) return;
-
-    let requests = arr.map(ele => {
-        if (typeof ele === 'object') { // object === creator
-            return 'https://megamanmaker.com/megamaker/user/' + ele.id;
-        } else { // else level
-            return 'https://megamanmaker.com/megamaker/level/info/' + ele;
-        }
-    });
-
-    return utils.runPromisesInSerial(requests, utils.getRequest)
-};
-
-const preserveLevelInfo = (creators) => {
-    if (!creators || creators.length === 0) return;
-
-    creators.map(creator => {
-        if (!creator.error) {
-            levels = levels.concat(creator.levels);
-            delete creator.levels;
-        }
-
-        return creator;
-    });
-};
-
-const updateCreatorInfo = (creators) => {
-    if (!creators || creators.length === 0) return;
-
-    const updates = creators.map(creator => {
-        avgScoreQueue.push(creator.id); // reserve the id's for updating the average scores
-        if (creator.error) {
-            const id = creator.id
-            return db.updateOne(collections.creators, { id: id }, { $set: { 
-                deleted: true, 
-                queued: false, 
-                updated: new Date() 
-            }});
-        }
-
-        return db.updateOne(collections.creators, { id: creator.id }, { 
-            $set: {
-                name: creator.name,
-                icon: creator.icon,
-                admin: creator.admin,
-                updated: new Date(),
-                queued: false,
-                currentScore: creator.score,
-                currentLevelSize: creator.level_size
-            },
-            $addToSet: {
-                score: { date: new Date(), score: creator.score },
-                level_size: { date: new Date(), level_size: creator.level_size }
-            }
-        });
-    });
-
-    return Promise.all(updates);
-};
-
-const updateLevels = (levels) => {
-    if (!levels || levels.length === 0) return;
-
-    const updates = levels.map(level => {
-        if(level.error) {
-            const id = level.id;
-            return db.updateOne(collections.levels, { id: id }, { 
-                $set: {
-                    id: id,
-                    deleted: true, 
-                    queued: false, 
-                    updated: new Date()
-                }
-            }, { upsert: true });
-        }
-        
-        return db.updateOne(collections.levels, { id: level.id }, {
-            $set: {
-                id: level.id,
-                name: level.name,
-                user: level.user,
-                boss: level.boss,
-                username: level.username,
-                date: new Date(level.date),
-                updated: new Date(),
-                queued: false,
-                currentScore: level.score,
-                currentDownloads: level.downloads
-            },
-            $addToSet: {
-                score: { date: new Date(), score: level.score },
-                downloads: { date: new Date(), downloads: level.downloads }
-            }
-        }, { upsert: true });
-    });
-
-    return Promise.all(updates);
-};
-
-const getOutdatedLevels = () => {
-    return db.distinct(collections.levels, 'id', { queued: true }); // return just [ id, id, ... ]
-};
-
-const getAvgScores = () => {
-    const queries = avgScoreQueue.map(id => {
-        return db.aggregate(collections.levels, [ { $match: { user: id } }, { 
-            $group: { 
-                _id: "$user", 
-                score: { 
-                    $avg: { 
-                        $arrayElemAt: [ '$score.score', -1 ] 
-                    } 
-                } 
-            }}]
-        );
-    });
-
-    return Promise.all(queries);
-};
-
-const updateAvgScores = (arr) => {
-    const scores = arr.map(score => {
-        return score[0];
-    });
-
-    const updates = scores.map(obj => {
-        return db.updateOne(collections.creators, { id: obj._id}, {
-            $set: {
-                currentAvgScore: Math.round(obj.score * 100) / 100
-            },
-            $addToSet: {
-                avgScore: { date: new Date(), score: obj.score }
-            }
-        });
-    });
-
-    return Promise.all(updates);
-};

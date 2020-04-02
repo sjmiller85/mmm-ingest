@@ -9,7 +9,8 @@
   "author": "Scott Miller",
   "license": "ISC",
   "dependencies": {
-    "mongodb": "^3.2.7",
+    "axios": "^0.19.2",
+    "mongoose": "^5.9.7",
     "ps-node": "^0.1.6"
   }
 }
