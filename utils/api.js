@@ -42,8 +42,8 @@ const getUserAvatar = async id => {
         error = true;
         return unknownImg;
       }
-      console.log(err);
-      utils.writeToLogFile(err);
+      console.log(e);
+      utils.writeToLogFile(e);
       process.exit();
     });
 
@@ -67,8 +67,8 @@ const getBossAvatar = async id => {
         error = true;
         return unknownImg;
       }
-      console.log(err);
-      utils.writeToLogFile(err);
+      console.log(e);
+      utils.writeToLogFile(e);
       process.exit();
     });
 
