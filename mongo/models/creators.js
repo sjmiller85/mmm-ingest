@@ -60,7 +60,7 @@ const getOutdatedCreators = () => {
       { updated: { $lt: new Date(Date.now() - config.threshold * 60 * 1000) } },
       "id"
     )
-    .sort({updated: 1})
+    .sort({ updated: 1 })
     .limit(85)
     .exec()
     .catch(utils.handleError);
@@ -73,8 +73,8 @@ const updateCreator = async creator => {
   let avgScore = 0;
 
   if (creator.error) {
-      creator.id = parseInt(creator.error.match(/\d+/)[0]);
-      return model.updateOne({id: creator.id}, {deleted: true});
+    creator.id = parseInt(creator.error.match(/\d+/)[0]);
+    return model.updateOne({ id: creator.id }, { deleted: true });
   }
 
   if (creator.levels.length > 0) {
@@ -146,6 +146,10 @@ const getCount = () => {
   return model.countDocuments();
 };
 
+const updateDeleted = () => {
+  return model.updateMany({}, { deleted: false });
+};
+
 module.exports = {
   getNonExistentCreatorIDs,
   getOutdatedCreators,
@@ -153,5 +157,6 @@ module.exports = {
   getAllCreators,
   deleteCreator,
   addCreatorToDb,
-  getCount
+  getCount,
+  updateDeleted
 };
