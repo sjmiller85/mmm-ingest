@@ -30,7 +30,7 @@ const getLatestThreshold = async () => {
     .exec()
     .catch(utils.handleError);
 
-  setThreshold(threshold);
+  setThreshold(threshold[0]);
   return getThreshold();
 };
 
