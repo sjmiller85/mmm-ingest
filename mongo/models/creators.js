@@ -146,10 +146,6 @@ const getCount = () => {
   return model.countDocuments();
 };
 
-const updateDeleted = () => {
-  return model.updateMany({}, { deleted: false });
-};
-
 module.exports = {
   getNonExistentCreatorIDs,
   getOutdatedCreators,
@@ -157,6 +153,5 @@ module.exports = {
   getAllCreators,
   deleteCreator,
   addCreatorToDb,
-  getCount,
-  updateDeleted
+  getCount
 };
