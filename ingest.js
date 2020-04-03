@@ -21,7 +21,7 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
 
   const freshIds = await mongo.models.creators.getNonExistentCreatorIDs(oldIds);
 
-  for (let i = 0; i < 10; i++) {
+  for (let i = 0; i < 50; i++) {
     await mongo.models.queue.addToQueue("creator", freshIds[i]);
   }
 
