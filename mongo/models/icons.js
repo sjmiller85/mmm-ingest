@@ -19,6 +19,7 @@ const addUserAvatar = async id => {
 
   if (!iconExists) {
     const base64 = await utils.api.getUserAvatar(id).catch(utils.handleError);
+    console.log(id);
     await model.create({ id, type: "user", base64 }).catch(utils.handleError);
   }
 };

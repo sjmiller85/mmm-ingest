@@ -25,7 +25,8 @@ const CreatorSchema = new Schema({
   avgScore: [ScoreSchema],
   currentLevelSize: { type: Number, required: true },
   currentScore: { type: Number, required: true },
-  currentAvgScore: { type: Number, required: true }
+  currentAvgScore: { type: Number, required: true },
+  deleted: { type: Boolean, required: true, default: false }
 });
 
 CreatorSchema.index({ id: 1 }, { unique: true });
@@ -59,6 +60,8 @@ const getOutdatedCreators = () => {
       { updated: { $lt: new Date(Date.now() - config.threshold * 60 * 1000) } },
       "id"
     )
+    .sort({updated: 1})
+    .limit(85)
     .exec()
     .catch(utils.handleError);
 };
@@ -68,6 +71,11 @@ const updateCreator = async creator => {
     .findOne({ id: creator.id }, { level_size: 1, score: 1, avgScore: 1 })
     .catch(utils.handleError);
   let avgScore = 0;
+
+  if (creator.error) {
+      creator.id = parseInt(creator.error.match(/\d+/)[0]);
+      return model.updateOne({id: creator.id}, {deleted: true});
+  }
 
   if (creator.levels.length > 0) {
     avgScore = (

@@ -97,7 +97,9 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
 
   // Add any icons to the db if they don't exist already
   for (let id of iconsNoDups) {
-    await mongo.models.icons.addUserAvatar(id).catch(utils.handleError);
+    if (id) {
+      await mongo.models.icons.addUserAvatar(id).catch(utils.handleError);
+    }
   }
 
   // Update the creators collection
@@ -115,7 +117,9 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
   // Update levels in the db
   await Promise.all(
     levels.map(e => {
-      return mongo.models.levels.updateLevel(e);
+      if (e) {
+        return mongo.models.levels.updateLevel(e);
+      }
     })
   ).catch(utils.handleError);
 
