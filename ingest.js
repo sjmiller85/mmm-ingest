@@ -11,6 +11,8 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
 
   utils.writeToLogFile("Starting ingest");
 
+  await mongo.models.thresholds.updateThreshold();
+
   // Get levels from MMM's popular API
   const popularLevels = await utils.api
     .getPopularLevels()

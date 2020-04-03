@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
-const config = require("../../config");
 const utils = require("../../utils");
 const queue = require("./queue");
+const thresholds = require("./thresholds");
 const Schema = mongoose.Schema;
 
 const DownloadsSchema = new Schema({
@@ -35,9 +35,12 @@ LevelSchema.index({ name: 1 });
 const model = mongoose.model("Level", LevelSchema);
 
 const getOutdatedLevels = () => {
+  const th = thresholds.getThreshold();
   return model
     .find({
-      updated: { $lt: new Date(Date.now() - config.threshold * 1.5 * 60 * 1000) },
+      updated: {
+        $lt: new Date(Date.now() - th.minutes * 1.5 * 60 * 1000)
+      },
       deleted: false
     })
     .sort({ updated: 1 })

@@ -1,8 +1,8 @@
 const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
-const config = require("../../config");
+const thresholds = require("./thresholds");
 const queue = require("./queue");
 const utils = require("../../utils");
+const Schema = mongoose.Schema;
 
 const LevelSizeSchema = new Schema({
   date: { type: Date, required: true, default: new Date() },
@@ -55,13 +55,14 @@ const getNonExistentCreatorIDs = async ids => {
 };
 
 const getOutdatedCreators = () => {
+  const th = thresholds.getThreshold();
   return model
     .find(
-      { updated: { $lt: new Date(Date.now() - config.threshold * 60 * 1000) } },
+      { updated: { $lt: new Date(Date.now() - th.minutes * 60 * 1000) } },
       "id"
     )
     .sort({ updated: 1 })
-    .limit(55)
+    .limit(th.limit)
     .exec()
     .catch(utils.handleError);
 };

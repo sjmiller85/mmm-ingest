@@ -62,8 +62,6 @@ const getBossAvatar = async id => {
   if (avatar === 404 || avatar.status === 404) {
     return unknownImg;
   } else if (avatar.status !== 200) {
-      console.log(url);
-    console.log(avatar);
     process.kill();
   }
 
