@@ -61,6 +61,7 @@ const getOutdatedCreators = () => {
       "id"
     )
     .sort({ updated: 1 })
+    .limit(100)
     .exec()
     .catch(utils.handleError);
 };

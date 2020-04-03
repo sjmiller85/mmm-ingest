@@ -13,22 +13,6 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
 
   utils.writeToLogFile("Starting ingest");
 
-  //
-  // Begin code for import of old IDs
-  //
-
-  const oldIds = ids.ids;
-
-  const freshIds = await mongo.models.creators.getNonExistentCreatorIDs(oldIds);
-
-  for (let i = 0; i < 50; i++) {
-    await mongo.models.queue.addToQueue("creator", freshIds[i]);
-  }
-
-  //
-  // end code for import of old IDs
-  //
-
   // Get levels from MMM's popular API
   const popularLevels = await utils.api
     .getPopularLevels()
