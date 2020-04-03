@@ -37,12 +37,13 @@ const getUserAvatar = async id => {
     .get(url, {
       responseType: "arraybuffer"
     })
-    .catch(e => e.response);
+    .catch(e => e.response.status);
 
-  if (avatar.status === 404) {
+  if (avatar === 404 || avatar.status === 404) {
     return unknownImg;
   } else if (avatar.status !== 200) {
-    return utils.handleError(avatar);
+    console.log(avatar);
+    process.kill();
   }
 
   const img = Buffer.from(avatar.data, "binary").toString("base64");
@@ -58,35 +59,17 @@ const getBossAvatar = async id => {
     })
     .catch(e => e.response.status);
 
-  if (avatar.status === 404) {
+  if (avatar === 404 || avatar.status === 404) {
     return unknownImg;
   } else if (avatar.status !== 200) {
-    return utils.handleError(avatar);
+      console.log(url);
+    console.log(avatar);
+    process.kill();
   }
 
   const img = Buffer.from(avatar.data, "binary").toString("base64");
   return `data:${avatar.headers["content-type"].toLowerCase()};base64,${img}`;
 };
-
-/*
-const checkIfErrorInRequest = (body, url) => {
-  // Checks if the get request returned an error, indicating it doesn't exist or was deleted
-  if (body.error) {
-    if (url.includes("level")) {
-      // It was a level
-      body.type = "level";
-      body.id = Number(url.substr(url.lastIndexOf("/") + 1));
-    }
-    if (url.includes("name")) {
-      // It was a creator
-      body.type = "creator";
-      body.id = url.substr(url.lastIndexOf("=") + 1);
-    }
-  }
-
-  return body;
-};
-*/
 
 module.exports = {
   getPopularLevels,

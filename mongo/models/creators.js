@@ -59,7 +59,6 @@ const getOutdatedCreators = () => {
       { updated: { $lt: new Date(Date.now() - config.threshold * 60 * 1000) } },
       "id"
     )
-    .limit(66)
     .exec()
     .catch(utils.handleError);
 };

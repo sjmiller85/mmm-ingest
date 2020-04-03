@@ -41,7 +41,6 @@ const getOutdatedLevels = () => {
       deleted: false
     })
     .sort({ updated: -1 })
-    .limit(666)
     .exec()
     .catch(utils.handleError);
 };
