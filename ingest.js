@@ -112,10 +112,10 @@ mongo.connect(config.dbUrl, config.dbName, async () => {
     levels = levels.concat(e.levels);
   });
 
-  // Add any levels from the creators array that don't already exist in the db
+  // Update levels in the db
   await Promise.all(
     levels.map(e => {
-      return mongo.models.levels.addLevelIfDoestExist(e);
+      return mongo.models.levels.updateLevel(e);
     })
   ).catch(utils.handleError);
 
