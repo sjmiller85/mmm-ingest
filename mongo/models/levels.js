@@ -37,11 +37,10 @@ const model = mongoose.model("Level", LevelSchema);
 const getOutdatedLevels = () => {
   return model
     .find({
-      updated: { $lt: new Date(Date.now() - config.threshold * 60 * 1000) },
+      updated: { $lt: new Date(Date.now() - config.threshold * 1.5 * 60 * 1000) },
       deleted: false
     })
     .sort({ updated: 1 })
-    .limit(1)
     .exec()
     .catch(utils.handleError);
 };
