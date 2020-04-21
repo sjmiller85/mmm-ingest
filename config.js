@@ -5,5 +5,5 @@ module.exports = {
 
   httpsDelay: 0, // Throttle the https requests to avoid DOS'ing the dev's server
 
-  limit: 90 // how many creators can be updated in under a minute
+  limit: 80, // how many creators can be updated in under a minute
 };
