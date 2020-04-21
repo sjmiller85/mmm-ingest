@@ -1,7 +1,6 @@
 const config = require("./config");
 const utils = require("./utils");
 const mongo = require("./mongo");
-const ids = require("./ids");
 
 mongo.connect(config.dbUrl, config.dbName, async () => {
   const creatorCount = await mongo.models.creators.getCount();
