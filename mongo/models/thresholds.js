@@ -48,7 +48,7 @@ const updateThreshold = async () => {
   const last = await getLatestThreshold();
   const current = await calculateThreshold();
 
-  if (last.minutes !== current || last.limit !== config.limit) {
+  if (last && (last.minutes !== current || last.limit !== config.limit)) {
     setThreshold({
       date: new Date(),
       limit: config.limit,
