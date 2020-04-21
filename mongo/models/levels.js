@@ -6,12 +6,12 @@ const Schema = mongoose.Schema;
 
 const DownloadsSchema = new Schema({
   date: { type: Date, required: true, default: new Date() },
-  downloads: { type: Number, required: true }
+  downloads: { type: Number, required: true },
 });
 
 const ScoreSchema = new Schema({
   date: { type: Date, required: true, default: new Date() },
-  score: { type: Number, required: true }
+  score: { type: Number, required: true },
 });
 
 const LevelSchema = new Schema({
@@ -26,7 +26,7 @@ const LevelSchema = new Schema({
   currentDownloads: { type: Number, required: true },
   currentScore: { type: Number, required: true },
   boss: { type: Number, required: true, default: false },
-  deleted: { type: Boolean, required: true, default: false }
+  deleted: { type: Boolean, required: true, default: false },
 });
 
 LevelSchema.index({ id: 1 }, { unique: true });
@@ -39,9 +39,9 @@ const getOutdatedLevels = () => {
   return model
     .find({
       updated: {
-        $lt: new Date(Date.now() - th.minutes * 1.5 * 60 * 1000)
+        $lt: new Date(Date.now() - th.minutes * 1.5 * 60 * 1000),
       },
-      deleted: false
+      deleted: false,
     })
     .sort({ updated: 1 })
     .limit(1)
@@ -49,7 +49,7 @@ const getOutdatedLevels = () => {
     .catch(utils.handleError);
 };
 
-const addLevelIfDoestExist = async level => {
+const addLevelIfDoestExist = async (level) => {
   const existingLevel = await model
     .findOne({ id: level.id })
     .catch(utils.handleError);
@@ -69,11 +69,11 @@ const addLevelIfDoestExist = async level => {
     username: level.username,
     currentDownloads: level.downloads,
     currentScore: level.score,
-    boss: level.boss
+    boss: level.boss,
   });
 };
 
-const updateLevel = async level => {
+const updateLevel = async (level) => {
   if (level.error) {
     await model
       .updateOne({ id: level.id }, { deleted: true })
@@ -96,7 +96,7 @@ const updateLevel = async level => {
     username: level.username,
     currentDownloads: level.downloads,
     currentScore: level.score,
-    boss: level.boss
+    boss: level.boss,
   };
 
   if (currentLevel) {
@@ -122,17 +122,14 @@ const updateLevel = async level => {
 };
 
 const getAllLevels = () => {
-  return model
-    .find()
-    .exec()
-    .catch(utils.handleError);
+  return model.find().exec().catch(utils.handleError);
 };
 
-const deleteLevel = id => {
+const deleteLevel = (id) => {
   return model.deleteOne({ id }).catch(utils.handleError);
 };
 
-const addLevelToDb = level => {
+const addLevelToDb = (level) => {
   return model.create(level).catch(utils.handleError);
 };
 
@@ -147,5 +144,5 @@ module.exports = {
   getAllLevels,
   deleteLevel,
   addLevelToDb,
-  getCount
+  getCount,
 };
